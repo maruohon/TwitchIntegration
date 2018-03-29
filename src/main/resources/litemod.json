@@ -1,0 +1,5 @@
+{
+    "name": "twitchintegration",
+    "mcversion": "1.12",
+    "mixinConfigs": [ "mixins.twitchintegration.json" ]
+}

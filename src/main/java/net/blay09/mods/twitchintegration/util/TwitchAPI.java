@@ -1,22 +1,5 @@
 package net.blay09.mods.twitchintegration.util;
 
-import com.google.common.collect.Maps;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import net.blay09.mods.twitchintegration.TwitchIntegration;
-import net.blay09.mods.twitchintegration.TwitchIntegrationConfig;
-import net.blay09.mods.twitchintegration.gui.GuiTwitchWaitingForUsername;
-import net.blay09.mods.twitchintegration.handler.TwitchBadge;
-import net.blay09.mods.twitchintegration.handler.TwitchChannel;
-import net.blay09.mods.chattweaks.ChatTweaks;
-import net.blay09.mods.chattweaks.balyware.CachedAPI;
-import net.blay09.mods.chattweaks.image.ITooltipProvider;
-import net.blay09.mods.chattweaks.image.renderable.ImageLoader;
-import net.minecraft.client.Minecraft;
-import net.minecraft.util.ResourceLocation;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -24,6 +7,22 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
+import com.google.common.collect.Maps;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import net.blay09.mods.chattweaks.LiteModChatTweaks;
+import net.blay09.mods.chattweaks.balyware.CachedAPI;
+import net.blay09.mods.chattweaks.image.ITooltipProvider;
+import net.blay09.mods.chattweaks.image.renderable.ImageLoader;
+import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
+import net.blay09.mods.twitchintegration.config.Configs;
+import net.blay09.mods.twitchintegration.gui.GuiTwitchWaitingForUsername;
+import net.blay09.mods.twitchintegration.handler.TwitchBadge;
+import net.blay09.mods.twitchintegration.handler.TwitchChannel;
+import net.blay09.mods.twitchintegration.reference.Reference;
+import net.minecraft.client.Minecraft;
 
 public class TwitchAPI {
 
@@ -48,7 +47,7 @@ public class TwitchAPI {
 				}
 			}
 		} catch (Exception e) {
-			TwitchIntegration.logger.error("Unexpected error when retrieving channel id for {}: ", name, e);
+		    LiteModTwitchIntegration.logger.error("Unexpected error when retrieving channel id for {}: ", name, e);
 		}
 		return -1;
 	}
@@ -70,14 +69,14 @@ public class TwitchAPI {
 						try {
 							badge = new TwitchBadge(ImageLoader.loadImage(new URI(imageUri), "twitch_" + badgeName + "_" + slashVal), ITooltipProvider.EMPTY);
 						} catch (IOException | URISyntaxException e) {
-							TwitchIntegration.logger.error("Could not load global chat badge {}: ", badgeName, e);
+						    LiteModTwitchIntegration.logger.error("Could not load global chat badge {}: ", badgeName, e);
 						}
 						result.put(badgeName + "/" + version.getKey(), badge);
 					}
 				}
 			}
 		} catch (Exception e) {
-			TwitchIntegration.logger.error("Unexpected error when loading global chat badges: ", e);
+		    LiteModTwitchIntegration.logger.error("Unexpected error when loading global chat badges: ", e);
 		}
 		return result;
 	}
@@ -99,14 +98,14 @@ public class TwitchAPI {
 						try {
 							badge = new TwitchBadge(ImageLoader.loadImage(new URI(imageUri), "twitch_" + channel.getName() + "_" + badgeName + "_" + slashVal), ITooltipProvider.EMPTY);
 						} catch (IOException | URISyntaxException e) {
-							TwitchIntegration.logger.error("Could not load chat badge {} for channel {}: ", badgeName, channel.getName(), e);
+						    LiteModTwitchIntegration.logger.error("Could not load chat badge {} for channel {}: ", badgeName, channel.getName(), e);
 						}
 						result.put(badgeName + "/" + version.getKey(), badge);
 					}
 				}
 			}
 		} catch (Exception e) {
-			TwitchIntegration.logger.error("Unexpected error when loading chat badges for channel {}: ", channel.getName(), e);
+		    LiteModTwitchIntegration.logger.error("Unexpected error when loading chat badges for channel {}: ", channel.getName(), e);
 		}
 		return result;
 	}
@@ -129,7 +128,7 @@ public class TwitchAPI {
 			Object desktop = desktopClass.getMethod("getDesktop").invoke(null);
 			desktopClass.getMethod("browse", URI.class).invoke(desktop, new URI(TWITCH_AUTHORIZE.replace("{{CLIENT_ID}}", CLIENT_ID).replace("{{REDIRECT_URI}}", OAUTH_REDIRECT_URI)));
 		} catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException | InvocationTargetException | URISyntaxException e) {
-			TwitchIntegration.logger.error("Could not open your browser - please copy the link into your browser manually.", e);
+		    LiteModTwitchIntegration.logger.error("Could not open your browser - please copy the link into your browser manually.", e);
 		}
 	}
 
@@ -142,14 +141,14 @@ public class TwitchAPI {
 						Gson gson = new Gson();
 						JsonObject root = gson.fromJson(reader, JsonObject.class);
 						String username = root.getAsJsonObject("token").get("user_name").getAsString();
-						ChatTweaks.getAuthManager().storeToken(TwitchIntegration.MOD_ID, username, token, TwitchIntegrationConfig.doNotStoreToken);
+						LiteModChatTweaks.getAuthManager().storeToken(Reference.MOD_ID, username, token, Configs.Twitch.DONT_STORE_TOKEN.getValue());
 						Minecraft.getMinecraft().addScheduledTask(callback);
 					} catch (Exception e) {
-						TwitchIntegration.logger.error("Failed to retrieve your username from the Twitch token. Please try again.", e);
+					    LiteModTwitchIntegration.logger.error("Failed to retrieve your username from the Twitch token. Please try again.", e);
 					}
 				}
 			} catch (IOException e) {
-				TwitchIntegration.logger.error("Failed to retrieve your username from the token. Please try again.", e);
+			    LiteModTwitchIntegration.logger.error("Failed to retrieve your username from the token. Please try again.", e);
 			}
 		}).start();
 	}

@@ -1,8 +1,14 @@
-package net.blay09.mods.twitchintegration;
+package net.blay09.mods.twitchintegration.command;
 
+import java.util.List;
+import java.util.Locale;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.StringUtils;
 import com.google.common.collect.Lists;
 import net.blay09.javatmi.TMIClient;
 import net.blay09.javatmi.TwitchMessage;
+import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
+import net.blay09.mods.twitchintegration.config.Configs;
 import net.blay09.mods.twitchintegration.handler.TwitchChannel;
 import net.blay09.mods.twitchintegration.handler.TwitchChatHandler;
 import net.minecraft.command.CommandBase;
@@ -14,11 +20,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.TextFormatting;
-import org.apache.commons.lang3.StringUtils;
-
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Locale;
 
 public class CommandTwitch extends CommandBase {
 
@@ -43,10 +44,10 @@ public class CommandTwitch extends CommandBase {
 			throw new WrongUsageException(getUsage(sender));
 		}
 		String message = StringUtils.join(args, ' ', 1, args.length);
-		TMIClient twitchClient = TwitchIntegration.getTwitchManager().getClient();
-		TwitchChatHandler twitchChatHandler = TwitchIntegration.getTwitchChatHandler();
+		TMIClient twitchClient = LiteModTwitchIntegration.getTwitchManager().getClient();
+		TwitchChatHandler twitchChatHandler = LiteModTwitchIntegration.getTwitchChatHandler();
 		if(twitchClient != null) {
-			if(TwitchIntegrationConfig.useAnonymousLogin || twitchClient.getIRCConnection().getNick().startsWith("justinfan")) {
+			if (Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() || twitchClient.getIRCConnection().getNick().startsWith("justinfan")) {
 				ITextComponent component = new TextComponentTranslation("twitchintegration.error.read_only_chat");
 				component.getStyle().setColor(TextFormatting.RED);
 				sender.sendMessage(component);
@@ -70,7 +71,7 @@ public class CommandTwitch extends CommandBase {
 	@Override
 	public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
 		List<String> completions = Lists.newArrayList();
-		for(TwitchChannel channel : TwitchIntegration.getTwitchManager().getChannels()) {
+		for (TwitchChannel channel : LiteModTwitchIntegration.getTwitchManager().getChannels()) {
 			if(channel.isActive()) {
 				completions.add("#" + channel.getName().toLowerCase(Locale.ENGLISH));
 			}

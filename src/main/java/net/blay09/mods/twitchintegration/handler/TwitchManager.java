@@ -1,23 +1,5 @@
 package net.blay09.mods.twitchintegration.handler;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.stream.JsonWriter;
-import net.blay09.javairc.IRCConfiguration;
-import net.blay09.javatmi.TMIClient;
-import net.blay09.mods.twitchintegration.TwitchIntegration;
-import net.blay09.mods.twitchintegration.TwitchIntegrationConfig;
-import net.blay09.mods.chattweaks.ChatManager;
-import net.blay09.mods.chattweaks.ChatTweaks;
-import net.blay09.mods.chattweaks.ChatViewManager;
-import net.blay09.mods.chattweaks.auth.TokenPair;
-import net.blay09.mods.chattweaks.chat.ChatView;
-
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -30,6 +12,24 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import javax.annotation.Nullable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
+import net.blay09.javairc.IRCConfiguration;
+import net.blay09.javatmi.TMIClient;
+import net.blay09.mods.chattweaks.ChatManager;
+import net.blay09.mods.chattweaks.ChatViewManager;
+import net.blay09.mods.chattweaks.LiteModChatTweaks;
+import net.blay09.mods.chattweaks.auth.TokenPair;
+import net.blay09.mods.chattweaks.chat.ChatView;
+import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
+import net.blay09.mods.twitchintegration.config.Configs;
+import net.blay09.mods.twitchintegration.reference.Reference;
 
 public class TwitchManager {
 
@@ -46,7 +46,7 @@ public class TwitchManager {
 	public void addChannel(TwitchChannel channel) {
 		channels.put(channel.getName().toLowerCase(Locale.ENGLISH), channel);
 		channel.loadChannelBadges();
-		TwitchIntegration.loadChannelEmotes(channel);
+		LiteModTwitchIntegration.loadChannelEmotes(channel);
 	}
 
 	public Collection<TwitchChannel> getChannels() {
@@ -59,7 +59,7 @@ public class TwitchManager {
 	}
 
 	public void connect() {
-		TokenPair tokenPair = ChatTweaks.getAuthManager().getToken(TwitchIntegration.MOD_ID);
+		TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
 
 		if (tokenPair != null && !channels.containsKey(tokenPair.getUsername().toLowerCase(Locale.ENGLISH))) {
 			TwitchChannel[] defaultChannels = createDefaults();
@@ -73,22 +73,22 @@ public class TwitchManager {
 			}
 		}
 
-		if(tokenPair != null || TwitchIntegrationConfig.useAnonymousLogin) {
-			IRCConfiguration.IRCConfigurationBuilder builder = TMIClient.defaultBuilder().debug(false);
-			if (tokenPair != null && !TwitchIntegrationConfig.useAnonymousLogin) {
+		if (tokenPair != null || Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue()) {
+			IRCConfiguration irc = TMIClient.defaultBuilder().setDebug(false);
+			if (tokenPair != null && Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() == false) {
 				String token = tokenPair.getToken().startsWith("oauth:") ? tokenPair.getToken() : "oauth:" + tokenPair.getToken();
-				builder.nick(tokenPair.getUsername()).password(token);
+				irc.setNick(tokenPair.getUsername()).setPassword(token);
 			} else {
-				builder.nick(getAnonymousUsername());
+				irc.setNick(getAnonymousUsername());
 			}
-			builder.port(TwitchIntegrationConfig.port);
+			irc.setPort(Configs.Twitch.PORT.getValue());
 			for (TwitchChannel channel : channels.values()) {
 				if (channel.isActive()) {
-					builder.autoJoinChannel("#" + channel.getName().toLowerCase(Locale.ENGLISH));
+					irc.setAutoJoinChannels(Lists.newArrayList("#" + channel.getName().toLowerCase(Locale.ENGLISH)));
 					activeChannels.add(channel);
 				}
 			}
-			twitchClient = new TMIClient(builder.build(), TwitchIntegration.getTwitchChatHandler());
+			twitchClient = new TMIClient(irc, LiteModTwitchIntegration.getTwitchChatHandler());
 			twitchClient.connect();
 		}
 	}
@@ -170,7 +170,7 @@ public class TwitchManager {
 			}
 		} catch (FileNotFoundException ignored) {
 		} catch (Exception e) {
-			TwitchIntegration.logger.error("Could not load Twitch channel configurations: ", e);
+			LiteModTwitchIntegration.logger.error("Could not load Twitch channel configurations: ", e);
 		}
 	}
 
@@ -186,12 +186,12 @@ public class TwitchManager {
 			writer.setIndent("  ");
 			gson.toJson(root, writer);
 		} catch (IOException e) {
-			TwitchIntegration.logger.error("Could not save Twitch channel configurations: ", e);
+			LiteModTwitchIntegration.logger.error("Could not save Twitch channel configurations: ", e);
 		}
 	}
 
 	public TwitchChannel[] createDefaults() {
-		TokenPair tokenPair = ChatTweaks.getAuthManager().getToken(TwitchIntegration.MOD_ID);
+		TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
 		if (tokenPair != null) {
 			TwitchChannel defaultChannel = new TwitchChannel(tokenPair.getUsername());
 			defaultChannel.setActive(true);

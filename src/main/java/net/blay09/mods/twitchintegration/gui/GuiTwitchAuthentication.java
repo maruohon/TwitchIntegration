@@ -1,25 +1,26 @@
 package net.blay09.mods.twitchintegration.gui;
 
-import net.blay09.mods.twitchintegration.TwitchIntegrationConfig;
-import net.blay09.mods.twitchintegration.util.TwitchAPI;
-import net.blay09.mods.twitchintegration.TwitchIntegration;
-import net.blay09.mods.chattweaks.ChatTweaks;
+import java.io.IOException;
+import javax.annotation.Nullable;
+import net.blay09.mods.chattweaks.LiteModChatTweaks;
 import net.blay09.mods.chattweaks.auth.TokenPair;
+import net.blay09.mods.chattweaks.balyware.gui.GuiCheckBox;
 import net.blay09.mods.chattweaks.balyware.gui.GuiPasswordField;
+import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
+import net.blay09.mods.twitchintegration.config.Configs;
+import net.blay09.mods.twitchintegration.reference.Reference;
+import net.blay09.mods.twitchintegration.util.TwitchAPI;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.*;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
-import net.minecraftforge.fml.client.config.GuiCheckBox;
-
-import javax.annotation.Nullable;
-import java.io.IOException;
 
 public class GuiTwitchAuthentication extends GuiScreen {
 
-	private static final ResourceLocation twitchLogo = new ResourceLocation(TwitchIntegration.MOD_ID, "twitch_logo.png");
+	private static final ResourceLocation twitchLogo = new ResourceLocation(Reference.MOD_ID, "twitch_logo.png");
 
 	private final GuiScreen parentScreen;
 
@@ -35,22 +36,25 @@ public class GuiTwitchAuthentication extends GuiScreen {
 	public void initGui() {
 		super.initGui();
 
-		btnGetToken = new GuiButton(0, width / 2 - 100, height / 2 - 25, 200, 20, TextFormatting.GREEN + I18n.format(TwitchIntegration.MOD_ID + ":gui.authentication.generateToken"));
+		btnGetToken = new GuiButton(0, width / 2 - 100, height / 2 - 25, 200, 20, TextFormatting.GREEN + I18n.format(Reference.MOD_ID + ":gui.authentication.generateToken"));
 		buttonList.add(btnGetToken);
 
 		txtToken = new GuiPasswordField(1, mc, width / 2 - 100, height / 2 + 20, 200, 15);
-		TokenPair tokenPair = ChatTweaks.getAuthManager().getToken(TwitchIntegration.MOD_ID);
+		TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
 		if(tokenPair != null) {
 			txtToken.setText(tokenPair.getToken());
 		}
-		txtToken.setEnabled(!TwitchIntegrationConfig.useAnonymousLogin);
+		txtToken.setEnabled(Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() == false);
 
-		GuiCheckBox chkAnonymous = new GuiCheckBox(2, width / 2 - 100, height / 2 + 45, I18n.format(TwitchIntegration.MOD_ID + ":gui.authentication.anonymousLogin"), TwitchIntegrationConfig.useAnonymousLogin) {
+		GuiCheckBox chkAnonymous = new GuiCheckBox(2, width / 2 - 100, height / 2 + 45,
+				I18n.format(Reference.MOD_ID + ":gui.authentication.anonymousLogin"),
+				Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue()) {
 			@Override
 			public boolean mousePressed(Minecraft mc, int mouseX, int mouseY) {
 				if(super.mousePressed(mc, mouseX, mouseY)) {
 					txtToken.setEnabled(isChecked());
-					TwitchIntegrationConfig.useAnonymousLogin = isChecked();
+					Configs.Twitch.USE_ANONYMOUS_LOGIN.setValue(isChecked());
+					Configs.save();
 					return true;
 				}
 				return false;
@@ -58,9 +62,9 @@ public class GuiTwitchAuthentication extends GuiScreen {
 		};
 		buttonList.add(chkAnonymous);
 
-		btnConnect = new GuiButton(3, width / 2, height / 2 + 65, 100, 20, I18n.format(TwitchIntegration.MOD_ID + ":gui.authentication.connect"));
-		if(TwitchIntegration.getTwitchManager().isConnected()) {
-			btnConnect.displayString = I18n.format(TwitchIntegration.MOD_ID + ":gui.authentication.disconnect");
+		btnConnect = new GuiButton(3, width / 2, height / 2 + 65, 100, 20, I18n.format(Reference.MOD_ID + ":gui.authentication.connect"));
+		if (LiteModTwitchIntegration.getTwitchManager().isConnected()) {
+			btnConnect.displayString = I18n.format(Reference.MOD_ID + ":gui.authentication.disconnect");
 		}
 		buttonList.add(btnConnect);
 	}
@@ -68,15 +72,17 @@ public class GuiTwitchAuthentication extends GuiScreen {
 	@Override
 	public void actionPerformed(@Nullable GuiButton button) throws IOException {
 		if(button == btnConnect) {
-			TokenPair tokenPair = ChatTweaks.getAuthManager().getToken(TwitchIntegration.MOD_ID);
-			if(!TwitchIntegrationConfig.useAnonymousLogin && (tokenPair == null || !tokenPair.getToken().equals(txtToken.getText()) || tokenPair.getUsername() == null)) {
+			TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
+			if (Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() == false &&
+				(tokenPair == null || !tokenPair.getToken().equals(txtToken.getText()) || tokenPair.getUsername() == null))
+			{
 				mc.displayGuiScreen(new GuiTwitchWaitingForUsername());
-				TwitchAPI.requestUsername(txtToken.getText(), () -> TwitchIntegration.getTwitchManager().connect());
+				TwitchAPI.requestUsername(txtToken.getText(), () -> LiteModTwitchIntegration.getTwitchManager().connect());
 			} else {
-				if(TwitchIntegration.getTwitchManager().isConnected()) {
-					TwitchIntegration.getTwitchManager().disconnect();
+				if (LiteModTwitchIntegration.getTwitchManager().isConnected()) {
+					LiteModTwitchIntegration.getTwitchManager().disconnect();
 				} else {
-					TwitchIntegration.getTwitchManager().connect();
+					LiteModTwitchIntegration.getTwitchManager().connect();
 				}
 				mc.displayGuiScreen(parentScreen);
 			}
@@ -111,7 +117,7 @@ public class GuiTwitchAuthentication extends GuiScreen {
 		GlStateManager.color(1f, 1f, 1f, 1f);
 		Minecraft.getMinecraft().getTextureManager().bindTexture(twitchLogo);
 		drawModalRectWithCustomSizedTexture(width / 2 - 64, height / 2 - 80, 0, 0, 128, 43, 128, 43);
-		drawString(mc.fontRenderer, I18n.format(TwitchIntegration.MOD_ID + ":gui.authentication.chatToken"), width / 2 - 100, height / 2 + 5, 0xFFFFFF);
+		drawString(mc.fontRenderer, I18n.format(Reference.MOD_ID + ":gui.authentication.chatToken"), width / 2 - 100, height / 2 + 5, 0xFFFFFF);
 		txtToken.drawTextBox();
 	}
 

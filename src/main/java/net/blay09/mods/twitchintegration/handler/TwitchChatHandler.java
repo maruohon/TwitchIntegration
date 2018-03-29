@@ -1,5 +1,16 @@
 package net.blay09.mods.twitchintegration.handler;
 
+import java.awt.Color;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -8,13 +19,11 @@ import net.blay09.javairc.IRCUser;
 import net.blay09.javatmi.TMIAdapter;
 import net.blay09.javatmi.TMIClient;
 import net.blay09.javatmi.TwitchEmote;
-import net.blay09.javatmi.TwitchUser;
 import net.blay09.javatmi.TwitchMessage;
-import net.blay09.mods.twitchintegration.TwitchIntegration;
-import net.blay09.mods.twitchintegration.TwitchIntegrationConfig;
+import net.blay09.javatmi.TwitchUser;
 import net.blay09.mods.chattweaks.ChatManager;
-import net.blay09.mods.chattweaks.ChatTweaks;
 import net.blay09.mods.chattweaks.ChatViewManager;
+import net.blay09.mods.chattweaks.LiteModChatTweaks;
 import net.blay09.mods.chattweaks.chat.ChatChannel;
 import net.blay09.mods.chattweaks.chat.ChatMessage;
 import net.blay09.mods.chattweaks.chat.ChatView;
@@ -28,21 +37,15 @@ import net.blay09.mods.chattweaks.chat.emotes.twitch.TwitchSubscriberEmotes;
 import net.blay09.mods.chattweaks.image.ChatImage;
 import net.blay09.mods.chattweaks.image.ChatImageDefault;
 import net.blay09.mods.chattweaks.image.ChatImageEmote;
+import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
+import net.blay09.mods.twitchintegration.config.Configs;
+import net.blay09.mods.twitchintegration.reference.Reference;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.TextFormatting;
-import net.minecraftforge.common.ForgeHooks;
-
-import javax.annotation.Nullable;
-import java.awt.*;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
+import net.minecraft.util.text.event.ClickEvent;
 
 public class TwitchChatHandler extends TMIAdapter {
 
@@ -71,7 +74,7 @@ public class TwitchChatHandler extends TMIAdapter {
 		}
 	}
 
-	private static final Pattern PATTERN_FORMAT = Pattern.compile("(?<=%[ucmr])|(?=%[ucmr])");
+	//private static final Pattern PATTERN_FORMAT = Pattern.compile("(?<=%[ucmr])|(?=%[ucmr])");
 	private final TwitchManager twitchManager;
 
 	public TwitchChatHandler(TwitchManager twitchManager) {
@@ -138,7 +141,7 @@ public class TwitchChatHandler extends TMIAdapter {
 					sb.append(twitchMessage.getMessage().substring(index, emoteData.getStart())).append(' '); // This space is definitely not a dirty hack, don't worry
 				}
 				int imageIndex = sb.length() + 1;
-				sb.append(ChatTweaks.TEXT_FORMATTING_EMOTE);
+				sb.append(LiteModChatTweaks.TEXT_FORMATTING_EMOTE);
 				for (int i = 0; i < emoteData.getEmote().getWidthInSpaces(); i++) {
 					sb.append(' ');
 				}
@@ -171,7 +174,7 @@ public class TwitchChatHandler extends TMIAdapter {
 				}
 				user.setBadges(tmpBadgeNames.toArray(new String[tmpBadgeNames.size()]));
 			}
-			if (twitchChannel != null && user.hasBadges() && !TwitchIntegrationConfig.disableNameBadges) {
+			if (twitchChannel != null && user.hasBadges() && Configs.Twitch.DISABLE_NAME_BADGES.getValue() == false) {
 				for (String badgeName : user.getBadges()) {
 					int slash = badgeName.indexOf('/');
 					int version = 1;
@@ -194,7 +197,7 @@ public class TwitchChatHandler extends TMIAdapter {
 			ITextComponent senderComponent = formatSenderComponent(user, tmpBadges);
 			ITextComponent messageComponent = formatMessageComponent(message, twitchMessage.isAction);
 			ITextComponent textComponent = formatComponent(senderComponent, messageComponent, twitchMessage.isAction());
-			ChatMessage chatMessage = ChatTweaks.createChatMessage(textComponent);
+			ChatMessage chatMessage = LiteModChatTweaks.createChatMessage(textComponent);
 			chatMessage.setSender(senderComponent);
 			chatMessage.setMessage(messageComponent);
 			chatMessage.setOutputVar("c", formatChannelComponent(channel));
@@ -205,15 +208,15 @@ public class TwitchChatHandler extends TMIAdapter {
 			for (ChatImage chatImage : tmpEmotes) {
 				chatMessage.addImage(chatImage);
 			}
-			if (user.hasColor() && !TwitchIntegrationConfig.disableUserColors) {
-				int nameColor = ChatTweaks.colorFromHex(user.getColor());
+			if (user.hasColor() && Configs.Twitch.DISABLE_USER_COLORS.getValue() == false) {
+				int nameColor = LiteModChatTweaks.colorFromHex(user.getColor());
 				chatMessage.setRGBColor(0, getAcceptableNameColor(nameColor));
 			} else {
 				chatMessage.setRGBColor(0, 0x808080);
 			}
 			if (twitchMessage.isAction()) {
-				if (user.hasColor() && !TwitchIntegrationConfig.disableUserColors) {
-					int nameColor = ChatTweaks.colorFromHex(user.getColor());
+				if (user.hasColor() && Configs.Twitch.DISABLE_USER_COLORS.getValue() == false) {
+					int nameColor = LiteModChatTweaks.colorFromHex(user.getColor());
 					chatMessage.setRGBColor(1, getAcceptableNameColor(nameColor));
 				} else {
 					chatMessage.setRGBColor(1, 0x808080);
@@ -222,7 +225,7 @@ public class TwitchChatHandler extends TMIAdapter {
 
 			messages.put(new ChannelUser(channel, user.getNick().toLowerCase(Locale.ENGLISH)), chatMessage);
 			users.put(user.getNick().toLowerCase(Locale.ENGLISH), user);
-			ChatTweaks.addChatMessage(chatMessage, targetChannel);
+			LiteModChatTweaks.addChatMessage(chatMessage, targetChannel);
 		});
 	}
 
@@ -230,7 +233,7 @@ public class TwitchChatHandler extends TMIAdapter {
 	public void onSubscribe(TMIClient client, final String channel, final String username, final boolean prime) {
 		Minecraft.getMinecraft().addScheduledTask(() -> {
 			TwitchChannel twitchChannel = twitchManager.getTwitchChannel(channel);
-			ChatTweaks.addChatMessage(new TextComponentTranslation(TwitchIntegration.MOD_ID + (prime ? ":chat.subscribePrime" : ":chat.subscribe"), username), twitchChannel != null ? twitchChannel.getChatChannel() : null);
+			LiteModChatTweaks.addChatMessage(new TextComponentTranslation(Reference.MOD_ID + (prime ? ":chat.subscribePrime" : ":chat.subscribe"), username), twitchChannel != null ? twitchChannel.getChatChannel() : null);
 		});
 	}
 
@@ -238,7 +241,7 @@ public class TwitchChatHandler extends TMIAdapter {
 	public void onResubscribe(TMIClient client, final String channel, final TwitchUser user, final int months, String message) {
 		Minecraft.getMinecraft().addScheduledTask(() -> {
 			TwitchChannel twitchChannel = twitchManager.getTwitchChannel(channel);
-			ChatTweaks.addChatMessage(new TextComponentTranslation(TwitchIntegration.MOD_ID + ":chat.resubscribe", user.getDisplayName(), months), twitchChannel != null ? twitchChannel.getChatChannel() : null);
+			LiteModChatTweaks.addChatMessage(new TextComponentTranslation(Reference.MOD_ID + ":chat.resubscribe", user.getDisplayName(), months), twitchChannel != null ? twitchChannel.getChatChannel() : null);
 		});
 		if (message != null) {
 			onTwitchChat(client, channel, user, new TwitchMessage(message, -1, false, 0));
@@ -252,7 +255,7 @@ public class TwitchChatHandler extends TMIAdapter {
 
 	public void onWhisperMessage(final TMIClient client, final TwitchUser user, final TwitchUser receiver, final String message) {
 		Minecraft.getMinecraft().addScheduledTask(() -> {
-			if (TwitchIntegrationConfig.showWhispers) {
+			if (Configs.Twitch.SHOW_WHISPERS.getValue()) {
 				boolean isSelf = user.getNick().equals(client.getIRCConnection().getNick());
 
 				// Apply Twitch Emotes
@@ -276,7 +279,7 @@ public class TwitchChatHandler extends TMIAdapter {
 						sb.append(message.substring(index, emoteData.getStart()));
 					}
 					int imageIndex = sb.length() + 1;
-					sb.append(ChatTweaks.TEXT_FORMATTING_EMOTE);
+					sb.append(LiteModChatTweaks.TEXT_FORMATTING_EMOTE);
 					for (int i = 0; i < emoteData.getEmote().getWidthInSpaces(); i++) {
 						sb.append(' ');
 					}
@@ -298,7 +301,7 @@ public class TwitchChatHandler extends TMIAdapter {
 				ITextComponent senderComponent = formatSenderComponent(user, tmpBadges);
 				ITextComponent messageComponent = formatMessageComponent(transformedMessage, isAction);
 				ITextComponent textComponent = formatComponent(senderComponent, messageComponent, isAction);
-				ChatMessage chatMessage = ChatTweaks.createChatMessage(textComponent);
+				ChatMessage chatMessage = LiteModChatTweaks.createChatMessage(textComponent);
 				chatMessage.setSender(senderComponent);
 				chatMessage.setMessage(messageComponent);
 				chatMessage.setOutputVar("r", formatSenderComponent(receiver, null));
@@ -306,15 +309,15 @@ public class TwitchChatHandler extends TMIAdapter {
 				for (ChatImage chatImage : tmpEmotes) {
 					chatMessage.addImage(chatImage);
 				}
-				if (user.hasColor() && !TwitchIntegrationConfig.disableUserColors) {
-					int nameColor = ChatTweaks.colorFromHex(user.getColor());
+				if (user.hasColor() && Configs.Twitch.DISABLE_USER_COLORS.getValue() == false) {
+					int nameColor = LiteModChatTweaks.colorFromHex(user.getColor());
 					chatMessage.setRGBColor(0, getAcceptableNameColor(nameColor));
 				} else {
 					chatMessage.setRGBColor(0, 0x808080);
 				}
 				if (isAction) {
-					if (user.hasColor() && !TwitchIntegrationConfig.disableUserColors) {
-						int nameColor = ChatTweaks.colorFromHex(user.getColor());
+					if (user.hasColor() && Configs.Twitch.DISABLE_USER_COLORS.getValue() == false) {
+						int nameColor = LiteModChatTweaks.colorFromHex(user.getColor());
 						chatMessage.setRGBColor(1, getAcceptableNameColor(nameColor));
 					} else {
 						chatMessage.setRGBColor(1, 0x808080);
@@ -331,7 +334,7 @@ public class TwitchChatHandler extends TMIAdapter {
 				}
 
 				users.put(user.getNick().toLowerCase(Locale.ENGLISH), user);
-				ChatTweaks.addChatMessage(chatMessage, whisperChannel);
+				LiteModChatTweaks.addChatMessage(chatMessage, whisperChannel);
 			}
 		});
 	}
@@ -346,13 +349,13 @@ public class TwitchChatHandler extends TMIAdapter {
 						for (ChatMessage message : messages.get(new ChannelUser(channel, username))) {
 							ChatManager.removeChatLine(message.getId());
 						}
-						ChatTweaks.refreshChat();
+						LiteModChatTweaks.refreshChat();
 						break;
 					case Strikethrough:
 						for (ChatMessage message : messages.get(new ChannelUser(channel, username))) {
 							message.getTextComponent().getStyle().setStrikethrough(true);
 						}
-						ChatTweaks.refreshChat();
+						LiteModChatTweaks.refreshChat();
 						break;
 					case Replace:
 						for (ChatMessage message : messages.get(new ChannelUser(channel, username))) {
@@ -362,8 +365,9 @@ public class TwitchChatHandler extends TMIAdapter {
 							message.setTextComponent(formatComponent(message.getSender(), removedMessageComponent, false));
 							message.clearImages();
 						}
-						ChatTweaks.refreshChat();
+						LiteModChatTweaks.refreshChat();
 						break;
+					default:
 				}
 			}
 		});
@@ -375,13 +379,13 @@ public class TwitchChatHandler extends TMIAdapter {
 			for (ChatMessage message : messages.values()) {
 				ChatManager.removeChatLine(message.getId());
 			}
-			ChatTweaks.refreshChat();
+			LiteModChatTweaks.refreshChat();
 		});
 	}
 
 	@Override
 	public void onUnhandledException(TMIClient client, final Exception e) {
-		TwitchIntegration.logger.error("Unhandled exception: ", e);
+		LiteModTwitchIntegration.logger.error("Unhandled exception: ", e);
 		Minecraft.getMinecraft().addScheduledTask(() -> {
 			if (Minecraft.getMinecraft().player != null) {
 				Minecraft.getMinecraft().player.sendStatusMessage(new TextComponentString(TextFormatting.RED + "Twitch Integration encountered an unhandled exception. The connection has been terminated. Please review your log files and let the mod developer know."), false);
@@ -398,19 +402,101 @@ public class TwitchChatHandler extends TMIAdapter {
 		StringBuilder sb = new StringBuilder();
 		if (nameBadges != null) {
 			for (ChatImage chatImage : nameBadges) {
-				sb.append(ChatTweaks.TEXT_FORMATTING_EMOTE);
+				sb.append(LiteModChatTweaks.TEXT_FORMATTING_EMOTE);
 				for (int i = 0; i < chatImage.getSpaces(); i++) {
 					sb.append(' ');
 				}
 			}
 		}
-		return new TextComponentString(sb.toString() + ChatTweaks.TEXT_FORMATTING_RGB + user.getDisplayName() + ChatTweaks.TEXT_FORMATTING_RGB);
+		return new TextComponentString(sb.toString() + LiteModChatTweaks.TEXT_FORMATTING_RGB + user.getDisplayName() + LiteModChatTweaks.TEXT_FORMATTING_RGB);
 	}
 
 	public static ITextComponent formatMessageComponent(String message, boolean isAction) {
 		message = TextFormatting.getTextWithoutFormattingCodes(message);
 		assert message != null;
-		return ForgeHooks.newChatWithLinks(message);
+		return newChatWithLinks(message);
+	}
+
+	static final Pattern URL_PATTERN = Pattern.compile(
+			//         schema                          ipv4            OR        namespace                 port     path         ends
+			//   |-----------------|        |-------------------------|  |-------------------------|    |---------| |--|   |---------------|
+			"((?:[a-z0-9]{2,}:\\/\\/)?(?:(?:[0-9]{1,3}\\.){3}[0-9]{1,3}|(?:[-\\w_]{1,}\\.[a-z]{2,}?))(?::[0-9]{1,5})?.*?(?=[!\"\u00A7 \n]|$))",
+			Pattern.CASE_INSENSITIVE);
+
+	public static ITextComponent newChatWithLinks(String string) {
+		return newChatWithLinks(string, true);
+	}
+
+	// Lifted from Minecraft Forge
+	public static ITextComponent newChatWithLinks(String string, boolean allowMissingHeader) {
+		// Includes ipv4 and domain pattern
+		// Matches an ip (xx.xxx.xx.xxx) or a domain (something.com) with or
+		// without a protocol or path.
+		ITextComponent ichat = null;
+		Matcher matcher = URL_PATTERN.matcher(string);
+		int lastEnd = 0;
+
+		// Find all urls
+		while (matcher.find())
+		{
+			int start = matcher.start();
+			int end = matcher.end();
+
+			// Append the previous left overs.
+			String part = string.substring(lastEnd, start);
+			if (part.length() > 0)
+			{
+				if (ichat == null)
+					ichat = new TextComponentString(part);
+				else
+					ichat.appendText(part);
+			}
+			lastEnd = end;
+			String url = string.substring(start, end);
+			ITextComponent link = new TextComponentString(url);
+
+			try
+			{
+				// Add schema so client doesn't crash.
+				if ((new URI(url)).getScheme() == null)
+				{
+					if (!allowMissingHeader)
+					{
+						if (ichat == null)
+							ichat = new TextComponentString(url);
+						else
+							ichat.appendText(url);
+						continue;
+					}
+					url = "http://" + url;
+				}
+			}
+			catch (URISyntaxException e)
+			{
+				// Bad syntax bail out!
+				if (ichat == null) ichat = new TextComponentString(url);
+				else ichat.appendText(url);
+				continue;
+			}
+
+			// Set the click event and append the link.
+			ClickEvent click = new ClickEvent(ClickEvent.Action.OPEN_URL, url);
+			link.getStyle().setClickEvent(click);
+			link.getStyle().setUnderlined(true);
+			link.getStyle().setColor(TextFormatting.BLUE);
+			if (ichat == null)
+				ichat = link;
+			else
+				ichat.appendSibling(link);
+		}
+
+		// Append the rest of the message.
+		String end = string.substring(lastEnd);
+		if (ichat == null)
+			ichat = new TextComponentString(end);
+		else if (end.length() > 0)
+			ichat.appendText(string.substring(lastEnd));
+		return ichat;
 	}
 
 	@Nullable

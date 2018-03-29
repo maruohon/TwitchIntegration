@@ -13,16 +13,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 package net.blay09.mods.twitchintegration.util;
 
-import com.google.common.collect.Lists;
-import net.blay09.mods.twitchintegration.TwitchIntegration;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.List;
 import java.util.Locale;
+import com.google.common.collect.Lists;
+import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
 
 public abstract class TokenReceiver implements Runnable {
 
@@ -51,7 +54,7 @@ public abstract class TokenReceiver implements Runnable {
 		try {
 			serverSocket = new ServerSocket(PORT, 0, InetAddress.getLoopbackAddress());
 		} catch (IOException e) {
-			TwitchIntegration.logger.error("Could not listen for the Twitch token: ", e);
+		    LiteModTwitchIntegration.logger.error("Could not listen for the Twitch token: ", e);
 			stop();
 			return;
 		}
@@ -123,7 +126,7 @@ public abstract class TokenReceiver implements Runnable {
 				content = "An error occurred (couldn't read file)";
 			}
 		} catch (IOException e) {
-			TwitchIntegration.logger.error("An error occured in the Twitch token receiver: ", e);
+		    LiteModTwitchIntegration.logger.error("An error occured in the Twitch token receiver: ", e);
 			content = "An error occurred (couldn't read file)";
 		}
 		return makeHeader(true) + content;
@@ -178,7 +181,7 @@ public abstract class TokenReceiver implements Runnable {
 					}
 				}
 			} catch (IOException e) {
-				TwitchIntegration.logger.error("Could not retrieve the Twitch token: ", e);
+			    LiteModTwitchIntegration.logger.error("Could not retrieve the Twitch token: ", e);
 			}
 		}
 

@@ -1,27 +1,86 @@
 package net.blay09.mods.twitchintegration.handler;
 
+import java.util.Locale;
+import java.util.Map;
+import javax.annotation.Nullable;
 import com.google.gson.JsonObject;
-import net.blay09.mods.chattweaks.image.ITooltipProvider;
-import net.blay09.mods.chattweaks.image.renderable.ImageLoader;
-import net.blay09.mods.twitchintegration.TwitchIntegration;
-import net.blay09.mods.twitchintegration.util.TwitchAPI;
 import net.blay09.mods.chattweaks.ChatManager;
 import net.blay09.mods.chattweaks.ChatViewManager;
 import net.blay09.mods.chattweaks.chat.ChatChannel;
 import net.blay09.mods.chattweaks.chat.ChatView;
+import net.blay09.mods.chattweaks.config.options.IConfigOptionListEntry;
+import net.blay09.mods.twitchintegration.reference.Reference;
+import net.blay09.mods.twitchintegration.util.TwitchAPI;
 import net.minecraft.util.ResourceLocation;
-
-import javax.annotation.Nullable;
-import java.util.Locale;
-import java.util.Map;
 
 public class TwitchChannel {
 
-	public enum DeletedMessages {
+	public enum DeletedMessages implements IConfigOptionListEntry<DeletedMessages>
+	{
 		Show,
 		Strikethrough,
 		Replace,
 		Hide;
+
+		@Override
+		public String getStringValue()
+		{
+			return this.toString();
+		}
+
+		@Override
+		public String getDisplayName()
+		{
+			return this.toString();
+		}
+
+		@Override
+		public int getOrdinalValue()
+		{
+			return this.ordinal();
+		}
+
+		@Override
+		public DeletedMessages cycle(boolean forward)
+		{
+			int id = this.ordinal();
+
+			if (forward)
+			{
+				if (++id >= values().length)
+				{
+					id = 0;
+				}
+			}
+			else
+			{
+				if (--id < 0)
+				{
+					id = values().length - 1;
+				}
+			}
+
+			return values()[id % values().length];
+		}
+
+		@Override
+		public DeletedMessages fromString(String name)
+		{
+			return fromStringStatic(name);
+		}
+
+		public static DeletedMessages fromStringStatic(String name)
+		{
+			for (DeletedMessages al : DeletedMessages.values())
+			{
+				if (al.name().equalsIgnoreCase(name))
+				{
+					return al;
+				}
+			}
+
+			return DeletedMessages.Replace;
+		}
 
 		public static DeletedMessages fromName(String name) {
 			try {
@@ -50,7 +109,7 @@ public class TwitchChannel {
 		}
 		chatChannel = ChatManager.getChatChannel(name);
 		if(chatChannel == null) {
-			chatChannel = new ChatChannel(name, "Twitch Chat for '" + name + "'", new ResourceLocation(TwitchIntegration.MOD_ID, "icon.png"));
+			chatChannel = new ChatChannel(name, "Twitch Chat for '" + name + "'", new ResourceLocation(Reference.MOD_ID, "icon.png"));
 			ChatManager.addChatChannel(chatChannel);
 		}
 	}
