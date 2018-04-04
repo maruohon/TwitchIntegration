@@ -6,8 +6,6 @@ import net.blay09.mods.chattweaks.ChatViewManager;
 import net.blay09.mods.chattweaks.chat.ChatView;
 import net.blay09.mods.chattweaks.config.gui.ChatTweaksConfigPanel;
 import net.blay09.mods.chattweaks.config.gui.ConfigPanelSub;
-import net.blay09.mods.chattweaks.config.gui.button.ButtonBase;
-import net.blay09.mods.chattweaks.config.gui.button.ConfigOptionListeners.ConfigOptionListenerDirtyChecker;
 import net.blay09.mods.chattweaks.config.options.ConfigBase;
 import net.blay09.mods.chattweaks.config.options.ConfigBoolean;
 import net.blay09.mods.chattweaks.config.options.ConfigOptionList;
@@ -15,11 +13,11 @@ import net.blay09.mods.chattweaks.config.options.ConfigString;
 import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
 import net.blay09.mods.twitchintegration.handler.TwitchChannel;
 import net.blay09.mods.twitchintegration.handler.TwitchChannel.DeletedMessages;
+import net.blay09.mods.twitchintegration.handler.TwitchManager;
 
 public class ConfigPanelTwitchChannelSettings extends ConfigPanelSub
 {
     private final TwitchChannel channel;
-    private final ConfigOptionListenerDirtyChecker<ButtonBase> listenerDirtyChecker = new ConfigOptionListenerDirtyChecker<>();
     private ConfigString name;
     private ConfigBoolean active;
     private ConfigBoolean subscribersOnly;
@@ -56,10 +54,10 @@ public class ConfigPanelTwitchChannelSettings extends ConfigPanelSub
     {
         boolean dirty = false;
 
-        if (this.listenerDirtyChecker.isDirty())
+        if (this.getButtonListener().isDirty())
         {
             dirty = true;
-            this.listenerDirtyChecker.resetDirty();
+            this.getButtonListener().resetDirty();
         }
 
         // This reads the textField contents back to the ConfigBase instances
@@ -70,10 +68,11 @@ public class ConfigPanelTwitchChannelSettings extends ConfigPanelSub
         this.channel.setDeletedMessages(this.deletedMessages.getValue());
 
         String oldName = this.channel.getName();
+        TwitchManager manager = LiteModTwitchIntegration.getTwitchManager();
 
         if (this.name.getStringValue().equalsIgnoreCase(oldName) == false)
         {
-            LiteModTwitchIntegration.getTwitchManager().renameTwitchChannel(this.channel, this.name.getStringValue());
+            manager.renameTwitchChannel(this.channel, this.name.getStringValue());
         }
 
         ChatView chatView = ChatViewManager.getChatView(this.channel.getName());
@@ -85,7 +84,8 @@ public class ConfigPanelTwitchChannelSettings extends ConfigPanelSub
 
         if (dirty)
         {
-            LiteModTwitchIntegration.getTwitchManager().saveChannels();
+            manager.updateChannelStates();
+            manager.saveChannels();
         }
     }
 }

@@ -7,7 +7,9 @@ import net.blay09.mods.chattweaks.config.gui.ChatTweaksConfigPanel;
 import net.blay09.mods.chattweaks.config.gui.ConfigPanelListBase;
 import net.blay09.mods.chattweaks.config.gui.ConfigPanelSub;
 import net.blay09.mods.chattweaks.config.gui.button.ButtonGeneric;
+import net.blay09.mods.chattweaks.config.gui.button.ConfigOptionListenerCallback;
 import net.blay09.mods.chattweaks.config.gui.button.ConfigOptionListeners.ButtonListenerListAction;
+import net.blay09.mods.chattweaks.config.gui.button.ConfigOptionListeners.ButtonListenerListAction.Type;
 import net.blay09.mods.chattweaks.config.gui.button.ConfigOptionListeners.ButtonListenerPanelSelection;
 import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
 import net.blay09.mods.twitchintegration.handler.TwitchChannel;
@@ -24,6 +26,29 @@ public class ConfigPanelTwitchChannels extends ConfigPanelListBase<TwitchChannel
             return new TwitchChannel("twitch");
         }
     };
+    private static final ConfigOptionListenerCallback<TwitchChannel> CALLBACK = new ConfigOptionListenerCallback<TwitchChannel>()
+    {
+        public void onListAction(ButtonListenerListAction.Type action, TwitchChannel listEntry)
+        {
+            if (listEntry != null)
+            {
+                TwitchManager manager = LiteModTwitchIntegration.getTwitchManager();
+
+                if (action == Type.REMOVE)
+                {
+                    manager.removeTwitchChannel(listEntry);
+                    manager.saveChannels();
+                }
+                else if (action == Type.ADD)
+                {
+                    manager.addChannel(listEntry);
+                    listEntry.createOrUpdateChatChannel();
+                    manager.saveChannels();
+                }
+            }
+        }
+    };
+
     private final List<TwitchChannel> list = new ArrayList<>();
 
     public ConfigPanelTwitchChannels(ChatTweaksConfigPanel parent, ConfigPanelSub parentSubPanel)
@@ -50,14 +75,6 @@ public class ConfigPanelTwitchChannels extends ConfigPanelListBase<TwitchChannel
     public void reCreateOptions()
     {
         TwitchManager manager = LiteModTwitchIntegration.getTwitchManager();
-        manager.removeAllChannels();
-
-        for (TwitchChannel channel : this.list)
-        {
-            channel.createOrUpdateChatChannel();
-            manager.addChannel(channel);
-        }
-
         manager.updateChannelStates();
 
         super.reCreateOptions();
@@ -70,7 +87,7 @@ public class ConfigPanelTwitchChannels extends ConfigPanelListBase<TwitchChannel
 
     protected ButtonListenerListAction<ButtonGeneric, TwitchChannel> createActionListener(ButtonListenerListAction.Type type, int index)
     {
-        return new ButtonListenerListAction<>(type, index, this.list, ENTRY_FACTORY, this);
+        return new ButtonListenerListAction<>(type, index, this.list, ENTRY_FACTORY, this, CALLBACK);
     }
 
     @Override

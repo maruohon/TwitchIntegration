@@ -2,6 +2,7 @@ package net.blay09.mods.twitchintegration.gui;
 
 import java.io.IOException;
 import javax.annotation.Nullable;
+import org.lwjgl.input.Keyboard;
 import net.blay09.mods.chattweaks.LiteModChatTweaks;
 import net.blay09.mods.chattweaks.auth.TokenPair;
 import net.blay09.mods.chattweaks.balyware.gui.GuiCheckBox;
@@ -90,6 +91,17 @@ public class GuiTwitchAuthentication extends GuiScreen {
 			mc.displayGuiScreen(new GuiTwitchOpenToken(this, 0));
 		} else {
 			super.actionPerformed(button);
+		}
+	}
+
+	@Override
+	protected void keyTyped(char typedChar, int keyCode) throws IOException
+	{
+		if (keyCode == Keyboard.KEY_ESCAPE) {
+			this.mc.displayGuiScreen(this.parentScreen);
+		}
+		else {
+			super.keyTyped(typedChar, keyCode);
 		}
 	}
 

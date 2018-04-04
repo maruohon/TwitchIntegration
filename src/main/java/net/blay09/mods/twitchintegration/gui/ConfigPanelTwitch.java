@@ -25,9 +25,15 @@ import net.minecraft.util.text.TextFormatting;
 
 public class ConfigPanelTwitch extends ConfigPanelSub
 {
+    private final TwitchManager manager;
+    private ButtonGeneric connectButton;
+    private boolean connectedLast;
+
     public ConfigPanelTwitch(ChatTweaksConfigPanel parent)
     {
         super("Twitch Integration", parent, null);
+
+        this.manager = LiteModTwitchIntegration.getTwitchManager();
     }
 
     @Override
@@ -42,9 +48,8 @@ public class ConfigPanelTwitch extends ConfigPanelSub
         super.addOptions(host);
 
         List<String> list = new ArrayList<>();
-        TwitchManager manager = LiteModTwitchIntegration.getTwitchManager();
 
-        for (TwitchChannel channel : manager.getChannels())
+        for (TwitchChannel channel : this.manager.getChannels())
         {
             if (channel != null)
             {
@@ -75,8 +80,7 @@ public class ConfigPanelTwitch extends ConfigPanelSub
 
         // Add the Edit Authentication button
         boolean isAuthenticated = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID) != null;
-        boolean canConnect = isAuthenticated || Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue();
-        boolean isConnected = manager.isConnected();
+        boolean isConnected = this.manager.isConnected();
         label = I18n.format(isAuthenticated ? "twitchintegration.config.edit_authentication" : "twitchintegration.config.authenticate");
 
         if (isAuthenticated == false && Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() == false)
@@ -88,14 +92,35 @@ public class ConfigPanelTwitch extends ConfigPanelSub
         this.addButton(new ButtonGeneric(id++, x + labelWidth, (this.nextElementY += 21), 204, 20, label), listenerAuth);
 
         // Add the Connect / Disconnect button
+        ButtonListenerConnect<ButtonGeneric> listenerConnect = new ButtonListenerConnect<>(this.manager);
+        label = getConnectButtonDisplayString(this.manager);
+        this.connectButton = new ButtonGeneric(id++, x + labelWidth, (this.nextElementY += 21), 204, 20, label);
+        this.connectButton.enabled = isAuthenticated || isConnected;
+        this.addButton(this.connectButton, listenerConnect);
+    }
+
+    @Override
+    public void onTick(ConfigPanelHost host)
+    {
+        super.onTick(host);
+
+        boolean connected = this.manager.isConnected();
+
+        if (connected != this.connectedLast && this.connectButton != null)
+        {
+            this.connectButton.displayString = getConnectButtonDisplayString(this.manager);
+            this.connectedLast = connected;
+        }
+    }
+
+    public static String getConnectButtonDisplayString(TwitchManager manager)
+    {
+        boolean isAuthenticated = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID) != null;
+        boolean canConnect = isAuthenticated || Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue();
+        boolean isConnected = manager.isConnected();
         String pre = (isConnected || canConnect == false) ? TextFormatting.RED.toString() : TextFormatting.GREEN.toString();
         String text = I18n.format("twitchintegration:gui.authentication." + (isConnected ?  "disconnect" : "connect"));
-        label = pre + text + TextFormatting.RESET;
-
-        ButtonListenerConnect<ButtonGeneric> listenerConnect = new ButtonListenerConnect<>(manager);
-        ButtonGeneric button = new ButtonGeneric(id++, x + labelWidth, (this.nextElementY += 21), 204, 20, label);
-        button.enabled = isAuthenticated || isConnected;
-        this.addButton(button, listenerConnect);
+        return pre + text + TextFormatting.RESET;
     }
 
     public static class ButtonListenerConnect<T extends ButtonBase> implements ButtonActionListener<T>
@@ -118,6 +143,8 @@ public class ConfigPanelTwitch extends ConfigPanelSub
             {
                 this.manager.connect();
             }
+
+            control.displayString = ConfigPanelTwitch.getConnectButtonDisplayString(this.manager);
         }
 
         @Override
