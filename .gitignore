@@ -3,6 +3,7 @@
 bin/
 build/
 eclipse/
+libs/
 .classpath
 .project
 build.number

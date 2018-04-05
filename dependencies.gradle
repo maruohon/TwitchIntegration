@@ -1,0 +1,12 @@
+dependencies {
+    //deobfCompile "chat-tweaks:ChatTweaks_1.12.2:5.1.9"
+    //deobfCompile fileTree (dir: 'libs', include: 'chattweaks-*-deobf.jar')
+
+    //compile fileTree (dir: 'libs', include: 'chattweaks-*-source.jar')
+    //compile fileTree (dir: 'libs', include: 'JavaIRC-*.jar')
+    //compile fileTree (dir: 'libs', include: 'JavaTMI-*.jar')
+
+    //compile file 'libs/chattweaks-1.12.0-5.2.0-dev.20180405.192613-source.jar', classifier: 'sources'
+
+    shade files('libs/JavaIRC-0.0.0.jar', 'libs/JavaTMI-0.1.0.jar')
+}
