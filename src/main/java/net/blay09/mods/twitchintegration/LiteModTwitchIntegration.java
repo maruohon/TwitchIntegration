@@ -4,7 +4,6 @@ import java.io.File;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.mojang.realmsclient.dto.RealmsServer;
-import com.mumfrey.liteloader.InitCompleteListener;
 import com.mumfrey.liteloader.JoinGameListener;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.LiteLoader;
@@ -19,12 +18,11 @@ import net.blay09.mods.twitchintegration.handler.TwitchChannel;
 import net.blay09.mods.twitchintegration.handler.TwitchChatHandler;
 import net.blay09.mods.twitchintegration.handler.TwitchManager;
 import net.blay09.mods.twitchintegration.reference.Reference;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.play.server.SPacketJoinGame;
 
-public class LiteModTwitchIntegration implements LiteMod, InitCompleteListener, JoinGameListener
+public class LiteModTwitchIntegration implements LiteMod, JoinGameListener
 {
     public static final Logger logger = LogManager.getLogger(Reference.MOD_ID);
     private String configDirPath;
@@ -67,20 +65,20 @@ public class LiteModTwitchIntegration implements LiteMod, InitCompleteListener, 
         }
 
         Configs.load();
+
+        // This loads the Twitch channels and creates the ChatChannels for them,
+        // so this needs to happen before Chat Tweaks does ChatViewManager.load(),
+        // which happens in onInitComplete().
+        this.twitchManager = new TwitchManager(new File(this.configDirPath, "twitch_channels.json"));
+
+        this.twitchChatHandler = new TwitchChatHandler(this.twitchManager);
+        ChatTweaksConfigPanel.registerSubPanelFactory(parent -> { return new ConfigPanelTwitch(parent); });
+        ClientCommandHandler.INSTANCE.registerCommand(new CommandTwitch());
     }
 
     @Override
     public void upgradeSettings(String version, File configPath, File oldConfigPath)
     {
-    }
-
-    @Override
-    public void onInitCompleted(Minecraft minecraft, LiteLoader loader)
-    {
-        this.twitchManager = new TwitchManager(new File(this.configDirPath, "twitch_channels.json"));
-        this.twitchChatHandler = new TwitchChatHandler(this.twitchManager);
-        ChatTweaksConfigPanel.registerSubPanelFactory(parent -> { return new ConfigPanelTwitch(parent); });
-        ClientCommandHandler.INSTANCE.registerCommand(new CommandTwitch());
     }
 
     @Override

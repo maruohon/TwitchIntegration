@@ -43,6 +43,25 @@ public class ConfigPanelTwitch extends ConfigPanelSub
     }
 
     @Override
+    public void onPanelHidden()
+    {
+        boolean dirty = false;
+
+        if (this.getButtonListener().isDirty())
+        {
+            dirty = true;
+            this.getButtonListener().resetDirty();
+        }
+
+        dirty |= this.handleTextFields();
+
+        if (dirty)
+        {
+            Configs.save();
+        }
+    }
+
+    @Override
     public void addOptions(ConfigPanelHost host)
     {
         super.addOptions(host);

@@ -64,8 +64,6 @@ public class Configs
                 LiteModChatTweaks.getAuthManager().storeToken(Reference.MOD_ID, token.getUsername(), token.getToken(), true);
             }
         }
-
-        //InputEventHandler.updateUsedKeys(); // TODO
     }
 
     public static void save()

@@ -3,6 +3,7 @@ package net.blay09.mods.twitchintegration.gui;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import net.blay09.mods.chattweaks.ChatViewManager;
 import net.blay09.mods.chattweaks.config.gui.ChatTweaksConfigPanel;
 import net.blay09.mods.chattweaks.config.gui.ConfigPanelListBase;
 import net.blay09.mods.chattweaks.config.gui.ConfigPanelSub;
@@ -28,22 +29,27 @@ public class ConfigPanelTwitchChannels extends ConfigPanelListBase<TwitchChannel
     };
     private static final ConfigOptionListenerCallback<TwitchChannel> CALLBACK = new ConfigOptionListenerCallback<TwitchChannel>()
     {
-        public void onListAction(ButtonListenerListAction.Type action, TwitchChannel listEntry)
+        @Override
+        public void onListAction(ButtonListenerListAction.Type action, TwitchChannel channel)
         {
-            if (listEntry != null)
+            if (channel != null)
             {
                 TwitchManager manager = LiteModTwitchIntegration.getTwitchManager();
 
-                if (action == Type.REMOVE)
+                if (action == Type.ADD)
                 {
-                    manager.removeTwitchChannel(listEntry);
+                    channel.createOrUpdateChatChannel();
+                    manager.addChannel(channel);
+                    manager.updateChannelStates();
                     manager.saveChannels();
+                    ChatViewManager.save();
                 }
-                else if (action == Type.ADD)
+                else if (action == Type.REMOVE)
                 {
-                    manager.addChannel(listEntry);
-                    listEntry.createOrUpdateChatChannel();
+                    manager.removeTwitchChannel(channel);
+                    manager.updateChannelStates();
                     manager.saveChannels();
+                    ChatViewManager.save();
                 }
             }
         }
@@ -69,15 +75,6 @@ public class ConfigPanelTwitchChannels extends ConfigPanelListBase<TwitchChannel
         this.list.addAll(LiteModTwitchIntegration.getTwitchManager().getChannels());
 
         super.clearOptions();
-    }
-
-    @Override
-    public void reCreateOptions()
-    {
-        TwitchManager manager = LiteModTwitchIntegration.getTwitchManager();
-        manager.updateChannelStates();
-
-        super.reCreateOptions();
     }
 
     @Override
