@@ -1,16 +1,16 @@
 [
-{
-  "modid": "twitchintegration",
-  "name": "Twitch Integration",
-  "description": "Brings your Twitch chat into Minecraft.",
-  "version": "${version}",
-  "mcversion": "${mcversion}",
-  "url": "",
-  "updateUrl": "",
-  "authorList": ["BlayTheNinth"],
-  "credits": "BlayTheNinth",
-  "logoFile": "",
-  "screenshots": [],
-  "dependencies": []
-}
+  {
+    "modid": "twitchintegration",
+    "name": "Twitch Integration",
+    "description": "Brings your Twitch chat into Minecraft.",
+    "version": "${mod_version}",
+    "mcversion": "${minecraft_version}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["BlayTheNinth"],
+    "credits": "BlayTheNinth",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
 ]
