@@ -33,180 +33,180 @@ import net.blay09.mods.twitchintegration.reference.Reference;
 
 public class TwitchManager {
 
-	private final File configFile;
-	private final Map<String, TwitchChannel> channels = Maps.newHashMap();
-	private final List<TwitchChannel> activeChannels = Lists.newArrayList();
-	private TMIClient twitchClient;
+    private final File configFile;
+    private final Map<String, TwitchChannel> channels = Maps.newHashMap();
+    private final List<TwitchChannel> activeChannels = Lists.newArrayList();
+    private TMIClient twitchClient;
 
-	public TwitchManager(File configFile) {
-		this.configFile = configFile;
-		loadChannels();
-	}
+    public TwitchManager(File configFile) {
+        this.configFile = configFile;
+        loadChannels();
+    }
 
-	public void addChannel(TwitchChannel channel) {
-		channels.put(channel.getName().toLowerCase(Locale.ENGLISH), channel);
-		channel.loadChannelBadges();
-		LiteModTwitchIntegration.loadChannelEmotes(channel);
-	}
+    public void addChannel(TwitchChannel channel) {
+        channels.put(channel.getName().toLowerCase(Locale.ENGLISH), channel);
+        channel.loadChannelBadges();
+        LiteModTwitchIntegration.loadChannelEmotes(channel);
+    }
 
-	public Collection<TwitchChannel> getChannels() {
-		return channels.values();
-	}
+    public Collection<TwitchChannel> getChannels() {
+        return channels.values();
+    }
 
-	@Nullable
-	public TMIClient getClient() {
-		return twitchClient;
-	}
+    @Nullable
+    public TMIClient getClient() {
+        return twitchClient;
+    }
 
-	public void connect() {
-		TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
+    public void connect() {
+        TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
 
-		if (tokenPair != null && !channels.containsKey(tokenPair.getUsername().toLowerCase(Locale.ENGLISH))) {
-			TwitchChannel[] defaultChannels = createDefaults();
-			if (defaultChannels.length > 0) {
-				TwitchChannel channel = defaultChannels[0];
-				channels.put(channel.getName().toLowerCase(Locale.ENGLISH), channel);
-				saveChannels();
+        if (tokenPair != null && !channels.containsKey(tokenPair.getUsername().toLowerCase(Locale.ENGLISH))) {
+            TwitchChannel[] defaultChannels = createDefaults();
+            if (defaultChannels.length > 0) {
+                TwitchChannel channel = defaultChannels[0];
+                channels.put(channel.getName().toLowerCase(Locale.ENGLISH), channel);
+                saveChannels();
 
-				channel.createOrUpdateChatChannel();
-				channel.createDefaultView();
-			}
-		}
+                channel.createOrUpdateChatChannel();
+                channel.createDefaultView();
+            }
+        }
 
-		if (tokenPair != null || Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue()) {
-			IRCConfiguration irc = TMIClient.defaultBuilder().setDebug(false);
-			if (tokenPair != null && Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() == false) {
-				String token = tokenPair.getToken().startsWith("oauth:") ? tokenPair.getToken() : "oauth:" + tokenPair.getToken();
-				irc.setNick(tokenPair.getUsername()).setPassword(token);
-			} else {
-				irc.setNick(getAnonymousUsername());
-			}
-			irc.setPort(Configs.Twitch.PORT.getValue());
-			for (TwitchChannel channel : channels.values()) {
-				if (channel.isActive()) {
-					irc.setAutoJoinChannels(Lists.newArrayList("#" + channel.getName().toLowerCase(Locale.ENGLISH)));
-					activeChannels.add(channel);
-				}
-			}
-			twitchClient = new TMIClient(irc, LiteModTwitchIntegration.getTwitchChatHandler());
-			twitchClient.connect();
-		}
-	}
+        if (tokenPair != null || Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue()) {
+            IRCConfiguration irc = TMIClient.defaultBuilder().setDebug(false);
+            if (tokenPair != null && Configs.Twitch.USE_ANONYMOUS_LOGIN.getValue() == false) {
+                String token = tokenPair.getToken().startsWith("oauth:") ? tokenPair.getToken() : "oauth:" + tokenPair.getToken();
+                irc.setNick(tokenPair.getUsername()).setPassword(token);
+            } else {
+                irc.setNick(getAnonymousUsername());
+            }
+            irc.setPort(Configs.Twitch.PORT.getValue());
+            for (TwitchChannel channel : channels.values()) {
+                if (channel.isActive()) {
+                    irc.setAutoJoinChannels(Lists.newArrayList("#" + channel.getName().toLowerCase(Locale.ENGLISH)));
+                    activeChannels.add(channel);
+                }
+            }
+            twitchClient = new TMIClient(irc, LiteModTwitchIntegration.getTwitchChatHandler());
+            twitchClient.connect();
+        }
+    }
 
-	private static String getAnonymousUsername() {
-		return "justinfan" + (int) (Math.floor(Math.random() * 80000.0D + 1000.0D));
-	}
+    private static String getAnonymousUsername() {
+        return "justinfan" + (int) (Math.floor(Math.random() * 80000.0D + 1000.0D));
+    }
 
-	public void disconnect() {
-		if (twitchClient != null) {
-			twitchClient.disconnect();
-			activeChannels.clear();
-			twitchClient = null;
-		}
-	}
+    public void disconnect() {
+        if (twitchClient != null) {
+            twitchClient.disconnect();
+            activeChannels.clear();
+            twitchClient = null;
+        }
+    }
 
-	public boolean isConnected() {
-		return twitchClient != null && twitchClient.getIRCConnection().isConnected();
-	}
+    public boolean isConnected() {
+        return twitchClient != null && twitchClient.getIRCConnection().isConnected();
+    }
 
-	public void updateChannelStates() {
-		// Leave channels if they were removed
-		for (TwitchChannel channel : activeChannels) {
-			if (!channels.containsKey(channel.getName().toLowerCase(Locale.ENGLISH))) {
-				ChatView chatView = ChatViewManager.getChatView(channel.getName());
-				if (chatView != null && chatView.getChannels().size() == 1 && chatView.getChannels().contains(channel.getChatChannel())) {
-					ChatViewManager.removeChatView(chatView);
-					ChatViewManager.save();
-				}
-				if (twitchClient != null) {
-					twitchClient.part("#" + channel.getName().toLowerCase(Locale.ENGLISH));
-				}
-			}
-		}
+    public void updateChannelStates() {
+        // Leave channels if they were removed
+        for (TwitchChannel channel : activeChannels) {
+            if (!channels.containsKey(channel.getName().toLowerCase(Locale.ENGLISH))) {
+                ChatView chatView = ChatViewManager.getChatView(channel.getName());
+                if (chatView != null && chatView.getChannels().size() == 1 && chatView.getChannels().contains(channel.getChatChannel())) {
+                    ChatViewManager.removeChatView(chatView);
+                    ChatViewManager.save();
+                }
+                if (twitchClient != null) {
+                    twitchClient.part("#" + channel.getName().toLowerCase(Locale.ENGLISH));
+                }
+            }
+        }
 
-		activeChannels.clear();
+        activeChannels.clear();
 
-		for (TwitchChannel channel : channels.values()) {
-			if (channel.isActive()) {
-				activeChannels.add(channel);
-				if (twitchClient != null) {
-					twitchClient.join("#" + channel.getName().toLowerCase(Locale.ENGLISH));
-				}
-			} else {
-				if (twitchClient != null) {
-					twitchClient.part("#" + channel.getName().toLowerCase(Locale.ENGLISH));
-				}
-			}
-		}
-	}
+        for (TwitchChannel channel : channels.values()) {
+            if (channel.isActive()) {
+                activeChannels.add(channel);
+                if (twitchClient != null) {
+                    twitchClient.join("#" + channel.getName().toLowerCase(Locale.ENGLISH));
+                }
+            } else {
+                if (twitchClient != null) {
+                    twitchClient.part("#" + channel.getName().toLowerCase(Locale.ENGLISH));
+                }
+            }
+        }
+    }
 
-	@Nullable
-	public TwitchChannel getTwitchChannel(String channel) {
-		return channels.get(channel.charAt(0) == '#' ? channel.substring(1).toLowerCase(Locale.ENGLISH) : channel.toLowerCase(Locale.ENGLISH));
-	}
+    @Nullable
+    public TwitchChannel getTwitchChannel(String channel) {
+        return channels.get(channel.charAt(0) == '#' ? channel.substring(1).toLowerCase(Locale.ENGLISH) : channel.toLowerCase(Locale.ENGLISH));
+    }
 
-	public void removeTwitchChannel(TwitchChannel channel) {
-		if(channel.getChatChannel() != null) {
-			ChatManager.removeChatChannel(channel.getChatChannel().getName());
-		}
-		channels.remove(channel.getName().toLowerCase(Locale.ENGLISH));
-		if (activeChannels.remove(channel)) {
-			if (twitchClient != null) {
-				twitchClient.part("#" + channel.getName().toLowerCase(Locale.ENGLISH));
-			}
-		}
-	}
+    public void removeTwitchChannel(TwitchChannel channel) {
+        if(channel.getChatChannel() != null) {
+            ChatManager.removeChatChannel(channel.getChatChannel().getName());
+        }
+        channels.remove(channel.getName().toLowerCase(Locale.ENGLISH));
+        if (activeChannels.remove(channel)) {
+            if (twitchClient != null) {
+                twitchClient.part("#" + channel.getName().toLowerCase(Locale.ENGLISH));
+            }
+        }
+    }
 
-	public void loadChannels() {
-		Gson gson = new Gson();
-		try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
-			JsonObject root = gson.fromJson(reader, JsonObject.class);
-			JsonArray channels = root.getAsJsonArray("channels");
-			for (JsonElement element : channels) {
-				JsonObject obj = element.getAsJsonObject();
-				TwitchChannel channel = TwitchChannel.fromJson(obj);
-				channel.createOrUpdateChatChannel();
-				addChannel(channel);
-			}
-		} catch (FileNotFoundException ignored) {
-		} catch (Exception e) {
-			LiteModTwitchIntegration.logger.error("Could not load Twitch channel configurations: ", e);
-		}
-	}
+    public void loadChannels() {
+        Gson gson = new Gson();
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
+            JsonObject root = gson.fromJson(reader, JsonObject.class);
+            JsonArray channels = root.getAsJsonArray("channels");
+            for (JsonElement element : channels) {
+                JsonObject obj = element.getAsJsonObject();
+                TwitchChannel channel = TwitchChannel.fromJson(obj);
+                channel.createOrUpdateChatChannel();
+                addChannel(channel);
+            }
+        } catch (FileNotFoundException ignored) {
+        } catch (Exception e) {
+            LiteModTwitchIntegration.logger.error("Could not load Twitch channel configurations: ", e);
+        }
+    }
 
-	public void saveChannels() {
-		JsonObject root = new JsonObject();
-		JsonArray channels = new JsonArray();
-		for (TwitchChannel channel : this.channels.values()) {
-			channels.add(channel.toJson());
-		}
-		root.add("channels", channels);
-		Gson gson = new Gson();
-		try (JsonWriter writer = new JsonWriter(new OutputStreamWriter(new FileOutputStream(configFile), StandardCharsets.UTF_8))) {
-			writer.setIndent("  ");
-			gson.toJson(root, writer);
-		} catch (IOException e) {
-			LiteModTwitchIntegration.logger.error("Could not save Twitch channel configurations: ", e);
-		}
-	}
+    public void saveChannels() {
+        JsonObject root = new JsonObject();
+        JsonArray channels = new JsonArray();
+        for (TwitchChannel channel : this.channels.values()) {
+            channels.add(channel.toJson());
+        }
+        root.add("channels", channels);
+        Gson gson = new Gson();
+        try (JsonWriter writer = new JsonWriter(new OutputStreamWriter(new FileOutputStream(configFile), StandardCharsets.UTF_8))) {
+            writer.setIndent("  ");
+            gson.toJson(root, writer);
+        } catch (IOException e) {
+            LiteModTwitchIntegration.logger.error("Could not save Twitch channel configurations: ", e);
+        }
+    }
 
-	public TwitchChannel[] createDefaults() {
-		TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
-		if (tokenPair != null) {
-			TwitchChannel defaultChannel = new TwitchChannel(tokenPair.getUsername());
-			defaultChannel.setActive(true);
-			return new TwitchChannel[]{defaultChannel};
-		}
-		return new TwitchChannel[0];
-	}
+    public TwitchChannel[] createDefaults() {
+        TokenPair tokenPair = LiteModChatTweaks.getAuthManager().getToken(Reference.MOD_ID);
+        if (tokenPair != null) {
+            TwitchChannel defaultChannel = new TwitchChannel(tokenPair.getUsername());
+            defaultChannel.setActive(true);
+            return new TwitchChannel[]{defaultChannel};
+        }
+        return new TwitchChannel[0];
+    }
 
-	public void removeAllChannels() {
-		channels.clear();
-	}
+    public void removeAllChannels() {
+        channels.clear();
+    }
 
-	public void renameTwitchChannel(TwitchChannel twitchChannel, String newName) {
-		removeTwitchChannel(twitchChannel);
-		twitchChannel.setName(newName);
-		addChannel(twitchChannel);
-	}
+    public void renameTwitchChannel(TwitchChannel twitchChannel, String newName) {
+        removeTwitchChannel(twitchChannel);
+        twitchChannel.setName(newName);
+        addChannel(twitchChannel);
+    }
 }
