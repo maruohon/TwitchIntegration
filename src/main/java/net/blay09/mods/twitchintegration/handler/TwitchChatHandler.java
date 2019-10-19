@@ -15,6 +15,12 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.event.ClickEvent;
 import net.blay09.javairc.IRCUser;
 import net.blay09.javatmi.TMIAdapter;
 import net.blay09.javatmi.TMIClient;
@@ -31,21 +37,16 @@ import net.blay09.mods.chattweaks.chat.emotes.EmoteScanner;
 import net.blay09.mods.chattweaks.chat.emotes.IEmote;
 import net.blay09.mods.chattweaks.chat.emotes.IEmoteScanner;
 import net.blay09.mods.chattweaks.chat.emotes.PositionedEmote;
+import net.blay09.mods.chattweaks.chat.emotes.twitch.TwitchChannelEmoteSource;
 import net.blay09.mods.chattweaks.chat.emotes.twitch.TwitchEmotesAPI;
-import net.blay09.mods.chattweaks.chat.emotes.twitch.TwitchGlobalEmotes;
-import net.blay09.mods.chattweaks.chat.emotes.twitch.TwitchSubscriberEmotes;
+import net.blay09.mods.chattweaks.chat.emotes.twitch.TwitchGlobalEmoteSource;
 import net.blay09.mods.chattweaks.image.ChatImage;
 import net.blay09.mods.chattweaks.image.ChatImageDefault;
 import net.blay09.mods.chattweaks.image.ChatImageEmote;
 import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
 import net.blay09.mods.twitchintegration.config.Configs;
 import net.blay09.mods.twitchintegration.reference.Reference;
-import net.minecraft.client.Minecraft;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.event.ClickEvent;
+
 
 public class TwitchChatHandler extends TMIAdapter {
 
@@ -74,7 +75,6 @@ public class TwitchChatHandler extends TMIAdapter {
         }
     }
 
-    //private static final Pattern PATTERN_FORMAT = Pattern.compile("(?<=%[ucmr])|(?=%[ucmr])");
     private final TwitchManager twitchManager;
 
     public TwitchChatHandler(TwitchManager twitchManager) {
@@ -83,7 +83,7 @@ public class TwitchChatHandler extends TMIAdapter {
 
     private final Comparator<PositionedEmote> emoteComparator = Comparator.comparingInt(PositionedEmote::getStart);
 
-    private final Predicate<IEmote> noTwitchEmotes = input -> !(input.getLoader() instanceof TwitchGlobalEmotes || input.getLoader() instanceof TwitchSubscriberEmotes);
+    private final Predicate<IEmote<?>> noTwitchEmotes = input -> !(input.getSource() instanceof TwitchGlobalEmoteSource || input.getSource() instanceof TwitchChannelEmoteSource);
 
     private final IEmoteScanner emoteScanner = new EmoteScanner();
     private final Multimap<ChannelUser, ChatMessage> messages = ArrayListMultimap.create();
@@ -113,6 +113,11 @@ public class TwitchChatHandler extends TMIAdapter {
                 return;
             }
 
+            // Hide messages by users on the configured blacklist
+            if (Configs.Twitch.USER_BLACKLIST.getValues().stream().anyMatch(it -> user.getNick().equalsIgnoreCase(it))) {
+				return;
+            }
+
             // Fetch the channel id from the message if it's not known yet
             if (twitchChannel != null && twitchChannel.getId() == -1 && twitchMessage.getChannelId() != -1) {
                 twitchChannel.setId(twitchMessage.getChannelId());
@@ -125,7 +130,7 @@ public class TwitchChatHandler extends TMIAdapter {
             List<PositionedEmote> emoteList = (isSelf && !user.hasEmotes()) ? emoteScanner.scanForEmotes(twitchMessage.getMessage(), null) : emoteScanner.scanForEmotes(twitchMessage.getMessage(), noTwitchEmotes);
             if (user.hasEmotes()) {
                 for (TwitchEmote twitchEmote : user.getEmotes()) {
-                    IEmote emote = TwitchEmotesAPI.getEmoteById(twitchEmote.getId());
+                    IEmote<?> emote = TwitchEmotesAPI.getEmoteById(twitchEmote.getId());
                     if (emote != null) {
                         emoteList.add(new PositionedEmote(emote, twitchEmote.getStart(), twitchEmote.getEnd()));
                     }
@@ -263,7 +268,7 @@ public class TwitchChatHandler extends TMIAdapter {
                 List<PositionedEmote> emoteList = (isSelf && !user.hasEmotes()) ? emoteScanner.scanForEmotes(message, null) : emoteScanner.scanForEmotes(message, noTwitchEmotes);
                 if (user.hasEmotes()) {
                     for (TwitchEmote twitchEmote : user.getEmotes()) {
-                        IEmote emote = TwitchEmotesAPI.getEmoteById(twitchEmote.getId());
+                        IEmote<?> emote = TwitchEmotesAPI.getEmoteById(twitchEmote.getId());
                         if (emote != null) {
                             emoteList.add(new PositionedEmote(emote, twitchEmote.getStart(), twitchEmote.getEnd()));
                         }
@@ -325,7 +330,7 @@ public class TwitchChatHandler extends TMIAdapter {
                 }
 
                 ChatView whisperView = ChatViewManager.getChatView(whisperChannel.getName());
-                if(whisperView == null) {
+                if (whisperView == null) {
                     whisperView = new ChatView(whisperChannel.getName());
                     whisperView.addChannel(whisperChannel);
                     whisperView.setOutgoingPrefix("/twitch " + (isSelf ? receiver.getNick().toLowerCase(Locale.ENGLISH) : user.getNick().toLowerCase(Locale.ENGLISH)) + " ");
@@ -417,6 +422,48 @@ public class TwitchChatHandler extends TMIAdapter {
         return newChatWithLinks(message);
     }
 
+    @Nullable
+    public static ITextComponent formatChannelComponent(@Nullable String channel) {
+        return channel != null ? new TextComponentString(channel) : null;
+    }
+
+    public static ITextComponent formatComponent(ITextComponent senderComponent, ITextComponent messageComponent, boolean isAction) {
+        ITextComponent textComponent = new TextComponentString("");
+        textComponent.appendSibling(senderComponent);
+        textComponent.appendText(isAction ? " " : ": ");
+        textComponent.appendSibling(messageComponent);
+        return textComponent;
+    }
+
+    public TwitchUser getThisUser(TMIClient client, String channel) {
+        if (channel == null) {
+            channel = !thisUsers.isEmpty() ? thisUsers.keySet().iterator().next() : "";
+        }
+
+        if (!thisUsers.containsKey(channel)) {
+            thisUsers.put(channel, new TwitchUser(new IRCUser(client.getIRCConnection().getNick(), null, null)));
+        }
+        return thisUsers.get(channel);
+    }
+
+    public TwitchUser getUser(String username) {
+        return users.computeIfAbsent(username.toLowerCase(Locale.ENGLISH), k -> new TwitchUser(new IRCUser(username, null, null)));
+    }
+
+    private final float[] tmpHSB = new float[3];
+
+    public int getAcceptableNameColor(int color) {
+        int red = (color >> 16 & 255);
+        int green = (color >> 8 & 255);
+        int blue = (color & 255);
+        Color.RGBtoHSB(red, green, blue, tmpHSB);
+        float brightness = tmpHSB[2];
+        if (brightness < 0.4f) {
+            brightness = 0.4f;
+        }
+        return Color.HSBtoRGB(tmpHSB[0], tmpHSB[1], brightness);
+    }
+
     static final Pattern URL_PATTERN = Pattern.compile(
             //         schema                          ipv4            OR        namespace                 port     path         ends
             //   |-----------------|        |-------------------------|  |-------------------------|    |---------| |--|   |---------------|
@@ -497,47 +544,5 @@ public class TwitchChatHandler extends TMIAdapter {
         else if (end.length() > 0)
             ichat.appendText(string.substring(lastEnd));
         return ichat;
-    }
-
-    @Nullable
-    public static ITextComponent formatChannelComponent(@Nullable String channel) {
-        return channel != null ? new TextComponentString(channel) : null;
-    }
-
-    public static ITextComponent formatComponent(ITextComponent senderComponent, ITextComponent messageComponent, boolean isAction) {
-        ITextComponent textComponent = new TextComponentString("");
-        textComponent.appendSibling(senderComponent);
-        textComponent.appendText(isAction ? " " : ": ");
-        textComponent.appendSibling(messageComponent);
-        return textComponent;
-    }
-
-    public TwitchUser getThisUser(TMIClient client, String channel) {
-        if (channel == null) {
-            channel = !thisUsers.isEmpty() ? thisUsers.keySet().iterator().next() : "";
-        }
-
-        if (!thisUsers.containsKey(channel)) {
-            thisUsers.put(channel, new TwitchUser(new IRCUser(client.getIRCConnection().getNick(), null, null)));
-        }
-        return thisUsers.get(channel);
-    }
-
-    public TwitchUser getUser(String username) {
-        return users.computeIfAbsent(username.toLowerCase(Locale.ENGLISH), k -> new TwitchUser(new IRCUser(username, null, null)));
-    }
-
-    private final float[] tmpHSB = new float[3];
-
-    public int getAcceptableNameColor(int color) {
-        int red = (color >> 16 & 255);
-        int green = (color >> 8 & 255);
-        int blue = (color & 255);
-        Color.RGBtoHSB(red, green, blue, tmpHSB);
-        float brightness = tmpHSB[2];
-        if (brightness < 0.4f) {
-            brightness = 0.4f;
-        }
-        return Color.HSBtoRGB(tmpHSB[0], tmpHSB[1], brightness);
     }
 }

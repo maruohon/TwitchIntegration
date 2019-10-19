@@ -12,6 +12,7 @@ import net.blay09.mods.chattweaks.auth.TokenPair;
 import net.blay09.mods.chattweaks.config.options.ConfigBase;
 import net.blay09.mods.chattweaks.config.options.ConfigBoolean;
 import net.blay09.mods.chattweaks.config.options.ConfigInteger;
+import net.blay09.mods.chattweaks.config.options.ConfigStringList;
 import net.blay09.mods.chattweaks.util.JsonUtils;
 import net.blay09.mods.twitchintegration.LiteModTwitchIntegration;
 import net.blay09.mods.twitchintegration.reference.Reference;
@@ -28,6 +29,7 @@ public class Configs
         public static final ConfigBoolean DONT_STORE_TOKEN      = new ConfigBoolean("dontStoreToken", false, "Set this if you're on a public computer or concerned about security.\nYou will have to re-authenticate every time you start Minecraft.");
         public static final ConfigBoolean SHOW_WHISPERS         = new ConfigBoolean("showWhispers", false, "Show whispers in the game chat");
         public static final ConfigBoolean USE_ANONYMOUS_LOGIN   = new ConfigBoolean("useAnonymousLogin", false, "If you login anonymously you can read chat, but you will not\nbe able to type to Twitch chat from within Minecraft");
+        public static final ConfigStringList USER_BLACKLIST     = new ConfigStringList("userBlackList", ImmutableList.of("nightbot"), "Messages by these users will not display in chat. Useful to hide bots for example.");
 
         public static final ImmutableList<ConfigBase> OPTIONS = ImmutableList.of(
                 DISABLE_NAME_BADGES,
@@ -35,6 +37,7 @@ public class Configs
                 DONT_STORE_TOKEN,
                 SHOW_WHISPERS,
                 USE_ANONYMOUS_LOGIN,
+                USER_BLACKLIST,
                 PORT
                 );
     }

@@ -4,11 +4,14 @@ import java.io.File;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.mojang.realmsclient.dto.RealmsServer;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.server.SPacketJoinGame;
 import com.mumfrey.liteloader.JoinGameListener;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.LiteLoader;
-import net.blay09.mods.chattweaks.chat.emotes.twitch.BTTVChannelEmotes;
-import net.blay09.mods.chattweaks.chat.emotes.twitch.FFZChannelEmotes;
+import net.blay09.mods.chattweaks.chat.emotes.bttv.BTTVChannelEmotes;
+import net.blay09.mods.chattweaks.chat.emotes.ffz.FFZChannelEmotes;
 import net.blay09.mods.chattweaks.config.gui.ChatTweaksConfigPanel;
 import net.blay09.mods.twitchintegration.command.ClientCommandHandler;
 import net.blay09.mods.twitchintegration.command.CommandTwitch;
@@ -18,9 +21,6 @@ import net.blay09.mods.twitchintegration.handler.TwitchChannel;
 import net.blay09.mods.twitchintegration.handler.TwitchChatHandler;
 import net.blay09.mods.twitchintegration.handler.TwitchManager;
 import net.blay09.mods.twitchintegration.reference.Reference;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.network.INetHandler;
-import net.minecraft.network.play.server.SPacketJoinGame;
 
 public class LiteModTwitchIntegration implements LiteMod, JoinGameListener
 {
