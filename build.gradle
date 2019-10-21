@@ -18,11 +18,21 @@ buildscript {
     }
 }
 
+repositories {
+    maven {
+        url 'https://masa.dy.fi/maven'
+    }
+}
+
 apply plugin: 'net.minecraftforge.gradle.liteloader'
 apply plugin: 'org.spongepowered.mixin'
 
 configurations {
     provided
+
+    //embed
+    //implementation.extendsFrom(embed)
+
     shade
     compile.extendsFrom shade
 }
@@ -64,6 +74,10 @@ group = config.group + config.mod_id // http://maven.apache.org/guides/mini/guid
 archivesBaseName = config.mod_id + '-' + config.minecraft_version_out
 version = project.minecraft.mod_version
 
+dependencies {
+    deobfCompile "net.blay09.mods.chattweaks:chattweaks-" + config.minecraft_version_out + ":" + config.chattweaks_version + ":deobf"
+}
+
 /**
  * This section allows you to customise the generated litemod.json file
  */
@@ -95,22 +109,11 @@ jar {
     baseName = archivesBaseName
 
     from litemod.outputs
-
-    /*
-    manifest.mainAttributes (
-        'Built-By': System.properties['user.name'],
-        'Created-By': System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
-        'Implementation-Title': config.mod_id,
-        'Implementation-Version': project.version
-    )
-    */
 }
 
 mixin {
     defaultObfuscationEnv notch
 }
-
-//tasks.withType(Jar)*.baseName = archivesBaseName
 
 processResources
 {
@@ -131,24 +134,3 @@ processResources
         exclude 'mcmod.info'
     }
 }
-
-/*
-jar {
-    configurations.shade.each { dep -> 
-        from(project.zipTree(dep)) {
-            exclude 'META-INF', 'META-INF/**'
-        }
-    }
-
-    from sourceSets.api.output
-}
-*/
-
-/*
-reobf {
-    jar {
-        extraLines "PK: net/blay09/javairc net/blay09/mods/twitchintegration/irc"
-        extraLines "PK: net/blay09/javatmi net/blay09/mods/twitchintegration/tmi"
-    }
-}
-*/
