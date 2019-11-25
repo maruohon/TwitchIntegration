@@ -3,6 +3,10 @@ package net.blay09.mods.twitchintegration.gui;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.util.text.TextFormatting;
 import com.mumfrey.liteloader.modconfig.ConfigPanelHost;
 import net.blay09.mods.chattweaks.LiteModChatTweaks;
 import net.blay09.mods.chattweaks.config.gui.ChatTweaksConfigPanel;
@@ -18,10 +22,6 @@ import net.blay09.mods.twitchintegration.config.Configs;
 import net.blay09.mods.twitchintegration.handler.TwitchChannel;
 import net.blay09.mods.twitchintegration.handler.TwitchManager;
 import net.blay09.mods.twitchintegration.reference.Reference;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.util.text.TextFormatting;
 
 public class ConfigPanelTwitch extends ConfigPanelSub
 {
@@ -34,31 +34,13 @@ public class ConfigPanelTwitch extends ConfigPanelSub
         super("Twitch Integration", parent, null);
 
         this.manager = LiteModTwitchIntegration.getTwitchManager();
+        this.setConfigSaver(Configs::save);
     }
 
     @Override
     protected Collection<ConfigBase> getConfigs()
     {
         return Configs.Twitch.OPTIONS;
-    }
-
-    @Override
-    public void onPanelHidden()
-    {
-        boolean dirty = false;
-
-        if (this.getButtonListener().isDirty())
-        {
-            dirty = true;
-            this.getButtonListener().resetDirty();
-        }
-
-        dirty |= this.handleTextFields();
-
-        if (dirty)
-        {
-            Configs.save();
-        }
     }
 
     @Override
